@@ -44,7 +44,7 @@ plsql-assignment4-28874-29844/
 ```
 ### Run the scripts in the order given under Installation and Execution
 
-* `00_schema/`: Contains DDL scripts for setting up the database schema, as well as DML scripts for seeding initial sample data (`01_create_tables.sql`, `02_insert_sample_data.sql`).
+* `00_schema/`: Contains DDL scripts for setting up the database schema, as well as DML scripts for seeding initial sample data (`01_create_tables.sql`, `02_insert_sample_data.sql`). `01_create_tables.sql` also creates the sequence `seq_reg_id`, the index `idx_reg_course_sem` and the collection type `t_id_list`.
 * `02_functions/`: Contains individual `.sql` files for user-defined functions (e.g., `calculate_student_gpa.sql`).
 * `01_procedures/`: Contains individual `.sql` files for each stored procedure (e.g., `bulk_register_students.sql`, `bulk_assign_letter_grades.sql`, `drop_registration.sql`, `print_student_transcript.sql`).
 * `03_tests/`: Contains anonymous PL/SQL blocks used to test the procedures and functions, simulating both successful executions and error conditions.
