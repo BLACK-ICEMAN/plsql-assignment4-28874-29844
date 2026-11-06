@@ -1,238 +1,699 @@
-# plsql-assignment4-28874-29844
+# Student Registration System - Advanced Oracle PL/SQL (Group Assignment IV)
 
-## Group Members  
-* Name: Abdelgafar Faisal Abdelgafar
-* **ID:** 28874
-* Name: CYUSA Bruno
-* **ID:** 29844
+**Course:** Database Development with PL/SQL (INSY 8311) - AUCA **Instructor:** Eric Maniraguha \| **Teaching Assistant:** Afanyu Emmanuel **Topic:** Cursors, Bulk Processing, Stored Procedures, Functions and Exception Handling
 
+## 1. Group members
 
-## Project Overview
-This repository contains a comprehensive PL/SQL implementation of a **Student Registration and Grading System**. The project demonstrates advanced database programming techniques in Oracle PL/SQL, including the use of explicit and implicit cursors, Records, Collections, bulk processing (`FORALL`, `BULK COLLECT`), and robust exception handling.
+| # | Full name | Student ID | Class group |
+| --- | --- | --- | --- |
+| 1 | Abdelgafar Faisal Abdelgafar | 28874 | \<I / B / C / D\> |
+| 2 | \<PARTNER FULL NAME\> | \<PARTNER ID\> | \<I / B / C / D\> |
 
-The system allows university administrators to register students for courses, assign grades in bulk, calculate GPAs, and generate student transcripts. 
+## 2. Application description and requirements
 
-## Repository Structure
-```text
-plsql-assignment4-28874-29844/
-├── 00_schema/
-│   ├── 01_create_tables.sql
-│   └── 02_insert_sample_data.sql
-├── 01_procedures/
-│   ├── bulk_assign_letter_grades.sql
-│   ├── bulk_register_students.sql
-│   ├── drop_registration.sql
-│   |── print_student_transcript.sql
-│   ├── purge_dropped_registrations.sql
-│   ├── record_student_score.sql
-│   ├── register_student_course.sql
-│   └── report_course_enrollment.sql
-├── 02_functions/
-│   |── calculate_student_gpa.sql
-│   ├── find_student_id_by_last_name.sql
-│   |── get_course_available_seats.sql
-│   └── get_letter_grade.sql
-├── 03_tests/
-│   ├── test_success_cases.sql
-│   └── test_error_cases.sql
-├── docs/
-│   └── IMPLEMENTATION_NOTES.md
-├── screenshots/
-│   └── <test_name>_output.png   (one per test case)
-├── .gitignore
-└── README.md
+**Scenario: Student Registration (and grading).** A university registrar needs to register students in courses for a semester, respect course capacities, let students drop courses, record scores, convert them to letter grades, and produce transcripts, GPAs and enrollment reports.
+
+Functional requirements implemented:
+
+1. Register one student in one course (only ACTIVE students, only if seats are available, no duplicates).
+2. Register many students at once in a course (bulk) and report which rows failed and why.
+3. Drop a registration and purge dropped registrations.
+4. Record a student's numeric score, then convert all recorded scores of a course to letter grades in bulk.
+5. Print a student's transcript with credits earned and GPA.
+6. Report the enrollment (enrolled / capacity / occupancy %) of every course for a semester.
+7. Query helpers: letter-grade conversion, available seats, student lookup by last name, GPA.
+8. Every operation validates its input and raises meaningful errors (`RAISE_APPLICATION_ERROR`); unexpected errors are never hidden.
+
+## 3. Database schema
+
 ```
-### Run the scripts in the order given under Installation and Execution
-
-* `00_schema/`: Contains DDL scripts for setting up the database schema, as well as DML scripts for seeding initial sample data (`01_create_tables.sql`, `02_insert_sample_data.sql`). `01_create_tables.sql` also creates the sequence `seq_reg_id`, the index `idx_reg_course_sem` and the collection type `t_id_list`.
-* `02_functions/`: Contains individual `.sql` files for user-defined functions (e.g., `calculate_student_gpa.sql`).
-* `01_procedures/`: Contains individual `.sql` files for each stored procedure (e.g., `bulk_register_students.sql`, `bulk_assign_letter_grades.sql`, `drop_registration.sql`, `print_student_transcript.sql`).
-* `03_tests/`: Contains anonymous PL/SQL blocks used to test the procedures and functions, simulating both successful executions and error conditions.
-* `screenshots/`: Contains `.png` images capturing the DBMS_OUTPUT of the test scripts to verify correct execution and exception handling.
-* `docs/`: Contains `IMPLEMENTATION_NOTES.md` detailing the design decisions and specific PL/SQL features used.
-
- **Functions must be compiled before procedures**
-because procedures call them (for example `bulk_assign_letter_grades` calls `get_letter_grade`).
-
-## Prerequisites
-* Oracle Database (19c or later recommended)
-* SQL Developer, SQLcl, or SQL*Plus
-
-## Project Summary
-The **Student Registration and Grading System** is a robust, backend relational database application built entirely using Oracle PL/SQL. It simulates the core academic operations of a university or school, managing the complex relationships between students, courses, enrollments, and academic performance. 
-
-The primary business workflows handled by this system include:
-* **Enrollment Management:** Safely registering students into courses and handling course drops while maintaining data integrity.
-* **Academic Grading:** Assigning letter grades to students at the end of a semester.
-* **Performance Calculation:** Dynamically computing a student's Grade Point Average (GPA) based on earned letter grades and course credit hours.
-* **Reporting:** Generating formatted academic transcripts for individual students.
-
-**Technical Objective:** 
-Beyond the business logic, this project serves as a comprehensive showcase of advanced PL/SQL programming capabilities. It is specifically architected to demonstrate the performance benefits of **Bulk Processing** (`FORALL`, `BULK COLLECT`) for high-volume transactions (like semester-wide grading), the precision of **Explicit and Implicit Cursors** for row-by-row data manipulation, and the reliability of custom **Exception Handling** to enforce academic business rules (e.g., preventing duplicate enrollments).
-
-### Business rules
-
-* Only students with status `ACTIVE` can register for a course.
-* A course cannot exceed its `capacity` in a given semester; dropped registrations free the seat.
-* A student can register for a given course only once per semester. A course that was failed
-  can be registered again in a later semester (each attempt is stored as its own registration row).
-* Scores must be between 0 and 100; letter grades are produced by one function, `get_letter_grade`.
-* Grade scale: A ≥ 90, B+ ≥ 85, B ≥ 80, C+ ≥ 75, C ≥ 70, D ≥ 60, F < 60 (GPA: A=4.0, B+=3.5, B=3.0, C+=2.5, C=2.0, D=1.0, F=0.0).
-* The procedures never `COMMIT`; the caller decides when to commit or roll back.
-
-## Installation and Execution
-
-You can do the installation manually in the following order:
-1. **Schema Creation & Data Seeding:**
-   Run the scripts in `00_schema/` to create the tables and insert sample data.
-   After tables are created you should get this exact output
-   
-   <img width="715" height="391" alt="image" src="https://github.com/user-attachments/assets/f11b4b91-7dcd-4796-8c86-5fafc268140c" />
-   
-   When you are also done seeding data into the tables, you can check by using this command
-```sql
-SELECT t.table_name,
-       (SELECT COUNT(*) FROM user_tab_columns c WHERE c.table_name = t.table_name) AS columns,
-       t.num_rows
-FROM   user_tables t
-WHERE  t.table_name IN ('DEPARTMENTS', 'STUDENTS', 'COURSES', 'REGISTRATIONS')
-ORDER  BY t.table_name;
+DEPARTMENTS (dept_id PK, dept_name UQ)
+     | 1                          | 1
+     | N                          | N
+STUDENTS (student_id PK, ..., dept_id FK, status)      COURSES (course_id PK, course_code UQ, credits, capacity, dept_id FK)
+     | 1                                                      | 1
+     | N                                                      | N
+     +------------------- REGISTRATIONS --------------------+
+        (reg_id PK, student_id FK, course_id FK, semester,
+         grade_score, letter_grade, status)
+         UNIQUE (student_id, course_id, semester)
 ```
 
-<img width="502" height="171" alt="image" src="https://github.com/user-attachments/assets/97a94f0c-7d77-40d7-a012-0eb75310508d" />
+- Full DDL with all constraints (PK, FK, UNIQUE, CHECK, NOT NULL, DEFAULT): [`00_schema/01_create_tables.sql`](00_schema/01_create_tables.sql)
+- Sample data (3 departments, 10 students, 6 courses, 19 registrations): [`00_schema/02_insert_sample_data.sql`](00_schema/02_insert_sample_data.sql)
+- Optional reset script: [`00_schema/00_drop_objects.sql`](00_schema/00_drop_objects.sql)
 
-2. **Compile Functions & Procedures:**
-   Execute the scripts in `02_functions/` followed by `01_procedures/` to compile the PL/SQL objects into the database.
-   For every function you compile you will see an output saying `Function function_name compiled` as well as for procedures `Procedure procedure_name compiled`
-3. **Run Tests:**
-   Execute the scripts in `03_tests/` to verify functionality. Ensure `SERVEROUTPUT` is turned on (`SET SERVEROUTPUT ON;`) to view the results.
-   -> When you run `test_error_cases.sql` you will get the output below (same order as in source code).
-   <img width="792" height="717" alt="image" src="https://github.com/user-attachments/assets/6bcb93a8-ed03-4bb4-9204-b6b80a22b198" />
-   <img width="752" height="792" alt="image" src="https://github.com/user-attachments/assets/57934f5a-156c-4e2d-8232-3b6b364738c6" />
-   <img width="841" height="860" alt="image" src="https://github.com/user-attachments/assets/7e2975d0-f95a-44c9-bf05-ab62a8215c11" />   
-   <img width="702" height="172" alt="image" src="https://github.com/user-attachments/assets/c578cb9b-a887-419b-9525-93da67224cbd" />
+## 4. How to run
 
-   -> `test_success_cases.sql` includes many test cases, after running every test in this file you need to also `rollback` Below are the screenshots (same order as in source code).
-   
-   <img width="622" height="207" alt="image" src="https://github.com/user-attachments/assets/8d6d9240-6f0b-43ef-b505-a53e82cd962d" />
-   <img width="597" height="197" alt="image" src="https://github.com/user-attachments/assets/440bb2a9-4089-4627-906d-5616bbcfffe3" />
-   <img width="701" height="202" alt="image" src="https://github.com/user-attachments/assets/72406c3a-8ac4-4407-a272-c258401f8b29" />
-   <img width="667" height="157" alt="image" src="https://github.com/user-attachments/assets/4235cddc-f109-4f79-8bf3-6aba8d832d6d" />
-   <img width="862" height="225" alt="image" src="https://github.com/user-attachments/assets/5a6dc7ca-72a8-45a6-85e4-e61003bb4c4a" />
-   <img width="697" height="220" alt="image" src="https://github.com/user-attachments/assets/215afa71-a65c-427f-925f-83eef16c8d9a" />
-   <img width="737" height="452" alt="image" src="https://github.com/user-attachments/assets/dd93b123-57ce-4df2-b319-4fe0dc46e11b" />
-   <img width="721" height="655" alt="image" src="https://github.com/user-attachments/assets/4eb80787-6f65-4a7f-b115-7e714e9eafc1" />
-   <img width="681" height="180" alt="image" src="https://github.com/user-attachments/assets/e3e7abb5-7990-4bf0-ab1b-1431c6649dc0" />
+Use any Oracle schema (user) that can create tables, sequences, types, procedures and functions. In SQL Developer open each file and press **F5 (Run Script)**; or from the repository root run `@run_all.sql` in SQL\*Plus / SQLcl.
 
-To make sure everything was compiled without any error, you can Verify it using the command below:  
-```sql
-SELECT object_type, object_name, status FROM user_objects
-WHERE  object_type IN ('FUNCTION', 'PROCEDURE', 'TYPE', 'SEQUENCE')
-ORDER  BY object_type, object_name;
+1. `00_schema/01_create_tables.sql`
+2. `00_schema/02_insert_sample_data.sql`
+3. Compile the **functions** in `02_functions/` (they are compiled before the procedures because `bulk_assign_letter_grades` and `print_student_transcript` call them)
+4. Compile the **stored procedures** in `01_procedures/`
+5. Run `03_tests/test_success_cases.sql`
+6. Run `03_tests/test_error_cases.sql`
+7. Compare the results with the screenshots below. Every test block ends with `ROLLBACK`, so the tests can be re-run at any time.
+
+To start from scratch run `00_schema/00_drop_objects.sql` first.
+
+## 5. Requirement coverage
+
+| Requirement | Files |
+| --- | --- |
+| Records (user-defined + `%ROWTYPE`) | `print_student_transcript.sql`, `register_student_course.sql`, `drop_registration.sql`, `report_course_enrollment.sql` |
+| Collections (nested table, associative arrays) | `t_id_list` in `01_create_tables.sql`, `bulk_register_students.sql`, `bulk_assign_letter_grades.sql`, `report_course_enrollment.sql`, `print_student_transcript.sql` |
+| Implicit cursors (`SQL%ROWCOUNT`, `SQL%FOUND`, `SQL%NOTFOUND`) | `register_student_course.sql`, `drop_registration.sql`, `purge_dropped_registrations.sql`, `record_student_score.sql` |
+| Explicit cursors | `report_course_enrollment.sql` (OPEN/FETCH/CLOSE), `bulk_assign_letter_grades.sql`, `calculate_student_gpa.sql` (cursor FOR loop) |
+| BULK COLLECT / FORALL / bulk errors | `bulk_register_students.sql`, `bulk_assign_letter_grades.sql`, `print_student_transcript.sql` |
+| Stored procedures (IN/OUT, exceptions) | `01_procedures/` (8 procedures) |
+| Stored functions | `02_functions/` (4 functions) |
+| Predefined / user-defined exceptions, `RAISE_APPLICATION_ERROR` | all files; see `docs/IMPLEMENTATION_NOTES.md` section 4 |
+
+Implementation and performance explanation: [`docs/IMPLEMENTATION_NOTES.md`](docs/IMPLEMENTATION_NOTES.md)
+
+## 6. Test cases - successful execution
+
+Each test shows the code that was executed followed by its screenshot.
+
+### S00 - Tables, row counts and compilation status of all objects
+
 ```
-or use the command below:
-```sql
+SET SERVEROUTPUT ON
+SELECT table_name
+  FROM user_tables
+ WHERE table_name IN ('DEPARTMENTS', 'STUDENTS', 'COURSES', 'REGISTRATIONS')
+ ORDER BY table_name;
+
+SELECT (SELECT COUNT(*) FROM departments)  AS departments,
+       (SELECT COUNT(*) FROM students)     AS students,
+       (SELECT COUNT(*) FROM courses)      AS courses,
+       (SELECT COUNT(*) FROM registrations) AS registrations
+  FROM dual;
+
 SELECT object_type, object_name, status
-FROM   user_objects
-WHERE  object_name IN (
-         'CALCULATE_STUDENT_GPA', 'FIND_STUDENT_ID_BY_LAST_NAME',
-         'GET_COURSE_AVAILABLE_SEATS', 'GET_LETTER_GRADE',
-         'BULK_ASSIGN_LETTER_GRADES', 'BULK_REGISTER_STUDENTS',
-         'DROP_REGISTRATION', 'PRINT_STUDENT_TRANSCRIPT',
-         'PURGE_DROPPED_REGISTRATIONS', 'RECORD_STUDENT_SCORE',
-         'REGISTER_STUDENT_COURSE', 'REPORT_COURSE_ENROLLMENT',
-         'SEQ_REG_ID', 'T_ID_LIST')
-ORDER  BY object_type, object_name;
+  FROM user_objects
+ WHERE object_name IN ('T_ID_LIST', 'SEQ_REG_ID',
+                       'REGISTER_STUDENT_COURSE', 'DROP_REGISTRATION', 'PURGE_DROPPED_REGISTRATIONS',
+                       'RECORD_STUDENT_SCORE', 'BULK_REGISTER_STUDENTS', 'BULK_ASSIGN_LETTER_GRADES',
+                       'PRINT_STUDENT_TRANSCRIPT', 'REPORT_COURSE_ENROLLMENT',
+                       'GET_LETTER_GRADE', 'CALCULATE_STUDENT_GPA',
+                       'GET_COURSE_AVAILABLE_SEATS', 'FIND_STUDENT_ID_BY_LAST_NAME')
+ ORDER BY object_type, object_name;
 ```
-<img width="641" height="367" alt="image" src="https://github.com/user-attachments/assets/9fcc08a9-259c-4cb0-be65-941dde57bbbe" />
 
--> You will be able to see the Object list, our sample data is 3 departments, 10 students, 6 courses, 19 registrations. So for example if you run:
-```sql
-SELECT COUNT(*) FROM departments;
+s00\_schema\_and\_objects
+
+### S01 - register\_student\_course: %ROWTYPE records + implicit INSERT cursor
+
 ```
--> You will be able to see that you have 3 departments
-```sql
-SELECT COUNT(*) FROM students;
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg_id registrations.reg_id%TYPE;
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Seats left in SENG201 (2026-FALL) BEFORE: ' || get_course_available_seats(105, '2026-FALL'));
+  register_student_course(p_student_id => 1004,
+                          p_course_id  => 105,
+                          p_semester   => '2026-FALL',
+                          p_reg_id     => v_reg_id);
+  DBMS_OUTPUT.PUT_LINE('OUT parameter p_reg_id = ' || v_reg_id);
+  DBMS_OUTPUT.PUT_LINE('Seats left in SENG201 (2026-FALL) AFTER : ' || get_course_available_seats(105, '2026-FALL'));
+END;
+/
+ROLLBACK;
 ```
--> You will be able to see that you have 10 students
-```sql
-SELECT COUNT(*) FROM courses;
+
+s01\_register\_student\_course
+
+### S02 - drop\_registration: implicit UPDATE cursor (SQL%NOTFOUND / SQL%ROWCOUNT)
+
 ```
--> You will be able to see that you have 6 courses
-```sql
-SELECT COUNT(*) FROM registrations;
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg_id registrations.reg_id%TYPE;
+  v_status registrations.status%TYPE;
+BEGIN
+  register_student_course(1004, 105, '2026-FALL', v_reg_id);
+  drop_registration(v_reg_id);
+
+  SELECT status INTO v_status FROM registrations WHERE reg_id = v_reg_id;
+  DBMS_OUTPUT.PUT_LINE('Status stored in the table now: ' || v_status);
+  DBMS_OUTPUT.PUT_LINE('Seats left in SENG201 (2026-FALL): ' || get_course_available_seats(105, '2026-FALL') ||
+                       ' (the dropped seat is free again)');
+END;
+/
+ROLLBACK;
 ```
--> You will be able to see that you have 19 registrations
 
+s02\_drop\_registration
 
-## Errors most likely to occur and Resolution  
-1. When `01_procedures/` is run before `02_functions/` you will get an error. Procedures will tend to call functions for example: procedure `bulk_assign_letter_grades` will call function `get_letter_grade`, you will get the following error in the screenshot because it will be considered as if function `get_letter_grade` has not been declared. So to avoid it, you have to run/compile functions first and then procedures after.
-<img width="832" height="297" alt="bulk assign letter grades error" src="https://github.com/user-attachments/assets/ca120a23-3a57-45c4-8a51-d23274433ac0" />
+### S03 - purge\_dropped\_registrations: implicit DELETE cursor (SQL%FOUND / SQL%NOTFOUND)
 
-## Database schema
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_deleted NUMBER;
+BEGIN
+  purge_dropped_registrations('2025-FALL', v_deleted);
+  DBMS_OUTPUT.PUT_LINE('OUT p_deleted = ' || v_deleted);
 
-Tables: `departments`, `students`, `courses`, `registrations`; sequence
-`seq_reg_id` (starts at 100); collection type `t_id_list`; index
-`idx_reg_course_sem`. Relationships: one department has many students and
-courses; `registrations` resolves the many-to-many relation between students and
-courses, with a unique key on `(student_id, course_id, semester)`.
-Check constraints restrict statuses, letter grades, scores, credits and capacity.
+  -- second call: nothing left to delete -> SQL%NOTFOUND branch
+  purge_dropped_registrations('2025-FALL', v_deleted);
+  DBMS_OUTPUT.PUT_LINE('OUT p_deleted = ' || v_deleted);
+END;
+/
+ROLLBACK;
+```
 
-## Procedures and functions
+s03\_purge\_dropped\_registrations
 
-| Name | Type | Purpose |
-|---|---|---|
-| `register_student_course` | Procedure | Registers a student in a course, checks rules, returns the new `reg_id` (OUT) |
-| `drop_registration` | Procedure | Marks a registration as DROPPED |
-| `purge_dropped_registrations` | Procedure | Deletes dropped registrations for a semester, returns the count (OUT) |
-| `record_student_score` | Procedure | Saves a score for a registered student |
-| `bulk_register_students` | Procedure | Registers many students at once, reports successes and failures |
-| `bulk_assign_letter_grades` | Procedure | `BULK COLLECT` + `FORALL` to assign letter grades for a course/semester |
-| `print_student_transcript` | Procedure | Prints a transcript with GPA using records and cursors |
-| `report_course_enrollment` | Procedure | Prints enrollment and seat occupancy per course |
-| `get_letter_grade` | Function | Converts a score to a letter grade |
-| `get_course_available_seats` | Function | Seats left in a course for a semester |
-| `find_student_id_by_last_name` | Function | Looks up a student id by last name |
-| `calculate_student_gpa` | Function | Computes a student's GPA |
+### S04 - record\_student\_score: implicit UPDATE cursor (SQL%FOUND)
 
-## Error codes
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_score registrations.grade_score%TYPE;
+BEGIN
+  record_student_score(p_reg_id => 12, p_score => 70);
 
-| Code | Meaning |
-|---|---|
-| ORA-20001 | Student does not exist |
-| ORA-20002 | Course does not exist |
-| ORA-20003 | Student is suspended |
-| ORA-20004 | Course is full |
-| ORA-20005 | Student already registered (or has a dropped record) |
-| ORA-20011 | Registration does not exist |
-| ORA-20012 | Registration cannot be dropped in its current status |
-| ORA-20080 | Invalid score (outside 0-100 or NULL) |
-| ORA-20081 | Registration missing or not in REGISTERED status |
-| ORA-20030 | Invalid score passed to `get_letter_grade` |
-| ORA-20040 | Student does not exist (GPA) |
-| ORA-20041 | Student has no graded course (GPA) |
-| ORA-20060 | No student with that last name |
-| ORA-20061 | Several students share that last name |
-| ORA-20100 | Course does not exist (bulk grading) |
-| ORA-20110 / ORA-20111 | Empty or NULL student list (bulk registration) |
-| ORA-20112 | Not enough seats for the bulk registration |
-| ORA-20120 | Department does not exist (enrollment report) |
-| ORA-20130 | Student does not exist (transcript) |
-| ORA-01400 | Unexpected NOT NULL violation, re-raised instead of hidden |
+  SELECT grade_score INTO v_score FROM registrations WHERE reg_id = 12;
+  DBMS_OUTPUT.PUT_LINE('grade_score stored in the table for reg 12 = ' || v_score);
+END;
+/
+ROLLBACK;
+```
 
-## Integrity statement  
-   We confirm that this work is our own, completed in accordance with the assignment guidelines and academic integrity standards, with the AI assistance described below. We ran all scripts and captured all screenshots ourselves.  
-   
-## Implementation and performance  
-See [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md).
+s04\_record\_student\_score
 
-## Use of AI assistance
+### S05 - bulk\_register\_students: nested table + FORALL ... SAVE EXCEPTIONS
 
-We used an AI assistant (Claude by Anthropic) as a helper in this project. It was used to:
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_registered NUMBER;
+  v_failed     NUMBER;
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Seats left in INSY8311 (2026-FALL) BEFORE: ' || get_course_available_seats(101, '2026-FALL'));
 
-- Explain Oracle PL/SQL features (bulk processing, `SAVE EXCEPTIONS`, cursor attributes, exception handling).
-- Diagnose a compile error (`PLS-00201`) caused by compiling procedures before the functions they call.
-- Review our test scripts, README and documentation for typos, inconsistencies and missing requirements from the assignment checklist.
-- Suggest SQL queries to verify that our objects, tables and sample data were created correctly.
+  -- 1004, 1007, 1010 are valid; 1006 is already registered; 9999 does not exist
+  bulk_register_students(p_course_id   => 101,
+                         p_semester    => '2026-FALL',
+                         p_student_ids => t_id_list(1004, 1006, 1007, 9999, 1010),
+                         p_registered  => v_registered,
+                         p_failed      => v_failed);
 
-The database design, the stored procedures and functions, and the test scripts are our own work. We reviewed every file, ran all scripts in Oracle ourselves, captured the screenshots from our own runs, and both members can explain and justify every line of the code.
+  DBMS_OUTPUT.PUT_LINE('OUT p_registered = ' || v_registered || ', OUT p_failed = ' || v_failed);
+  DBMS_OUTPUT.PUT_LINE('Seats left in INSY8311 (2026-FALL) AFTER : ' || get_course_available_seats(101, '2026-FALL'));
+END;
+/
+ROLLBACK;
+```
+
+s05\_bulk\_register\_students
+
+### S06 - bulk\_assign\_letter\_grades: explicit cursor + BULK COLLECT LIMIT + FORALL UPDATE
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_updated NUMBER;
+  v_failed  NUMBER;
+BEGIN
+  bulk_assign_letter_grades(p_course_id => 101,
+                            p_semester  => '2026-FALL',
+                            p_updated   => v_updated,
+                            p_failed    => v_failed);
+  DBMS_OUTPUT.PUT_LINE('OUT p_updated = ' || v_updated || ', OUT p_failed = ' || v_failed);
+
+  FOR rec IN (SELECT reg_id, student_id, grade_score, letter_grade, status
+                FROM registrations
+               WHERE course_id = 101
+                 AND semester  = '2026-FALL'
+               ORDER BY reg_id)
+  LOOP
+    DBMS_OUTPUT.PUT_LINE('reg ' || rec.reg_id || ' | student ' || rec.student_id ||
+                         ' | score ' || rec.grade_score || ' | grade ' || rec.letter_grade ||
+                         ' | ' || rec.status);
+  END LOOP;
+END;
+/
+ROLLBACK;
+```
+
+s06\_bulk\_assign\_letter\_grades
+
+### S07 - print\_student\_transcript: user-defined record + collection of records
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_credits NUMBER;
+BEGIN
+  print_student_transcript(p_student_id => 1001, p_total_credits => v_credits);
+  DBMS_OUTPUT.PUT_LINE('OUT p_total_credits = ' || v_credits);
+  DBMS_OUTPUT.PUT_LINE(' ');
+
+  -- student without any graded course: the GPA is reported as "not available"
+  print_student_transcript(p_student_id => 1007, p_total_credits => v_credits);
+  DBMS_OUTPUT.PUT_LINE('OUT p_total_credits = ' || v_credits);
+END;
+/
+ROLLBACK;
+```
+
+s07\_print\_student\_transcript
+
+### S08 - report\_course\_enrollment: parameterized explicit cursor + associative array
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_listed NUMBER;
+BEGIN
+  report_course_enrollment(p_semester => '2026-FALL', p_courses_listed => v_listed);
+  DBMS_OUTPUT.PUT_LINE('OUT p_courses_listed = ' || v_listed);
+  DBMS_OUTPUT.PUT_LINE(' ');
+
+  -- only the Software Engineering department (dept_id = 30)
+  report_course_enrollment(p_semester => '2026-FALL', p_dept_id => 30, p_courses_listed => v_listed);
+  DBMS_OUTPUT.PUT_LINE('OUT p_courses_listed = ' || v_listed);
+END;
+/
+ROLLBACK;
+```
+
+s08\_report\_course\_enrollment
+
+### S09 - Functions called from SQL statements and from an anonymous PL/SQL block
+
+```
+SET SERVEROUTPUT ON
+-- (a) from SQL statements
+SELECT get_letter_grade(92)   AS grade_92,
+       get_letter_grade(85)   AS grade_85,
+       get_letter_grade(59.9) AS grade_59_9
+  FROM dual;
+
+SELECT course_code,
+       capacity,
+       get_course_available_seats(course_id, '2026-FALL') AS seats_left
+  FROM courses
+ ORDER BY course_code;
+
+-- (b) from an anonymous block
+DECLARE
+  v_id  students.student_id%TYPE;
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('GPA of student 1001 = ' || calculate_student_gpa(1001));
+  DBMS_OUTPUT.PUT_LINE('GPA of student 1005 = ' || calculate_student_gpa(1005));
+
+  v_id := find_student_id_by_last_name('Uwase');
+  DBMS_OUTPUT.PUT_LINE('Student with last name Uwase has id = ' || v_id);
+END;
+/
+ROLLBACK;
+```
+
+s09\_functions
+
+## 7. Test cases - error handling
+
+Each call is wrapped only to print the error for the screenshot; the procedures/functions themselves raise the errors to the caller.
+
+### E01 - NO\_DATA\_FOUND -\> ORA-20001 / ORA-20002
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg registrations.reg_id%TYPE;
+BEGIN
+  BEGIN
+    register_student_course(99999, 101, '2026-FALL', v_reg);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (unknown student): ' || SQLERRM);
+  END;
+
+  BEGIN
+    register_student_course(1004, 999, '2026-FALL', v_reg);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (unknown course) : ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e01\_student\_or\_course\_not\_found
+
+### E02 - user-defined exception e\_student\_inactive -\> ORA-20003
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg registrations.reg_id%TYPE;
+BEGIN
+  register_student_course(1009, 101, '2026-FALL', v_reg);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e02\_student\_suspended
+
+### E03 - user-defined exception e\_course\_full -\> ORA-20004
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg registrations.reg_id%TYPE;
+BEGIN
+  DBMS_OUTPUT.PUT_LINE('Seats left in INSY350 (2026-FALL): ' || get_course_available_seats(106, '2026-FALL'));
+  register_student_course(1001, 106, '2026-FALL', v_reg);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e03\_course\_full
+
+### E04 - predefined exception DUP\_VAL\_ON\_INDEX -\> ORA-20005
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg registrations.reg_id%TYPE;
+BEGIN
+  -- student 1001 is already registered in INSY229 for 2026-FALL (reg 9)
+  register_student_course(1001, 102, '2026-FALL', v_reg);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e04\_duplicate\_registration
+
+### E05 - NO\_DATA\_FOUND -\> ORA-20011
+
+```
+SET SERVEROUTPUT ON
+BEGIN
+  drop_registration(99999);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e05\_drop\_registration\_not\_found
+
+### E06 - SQL%NOTFOUND + user-defined exception -\> ORA-20012
+
+```
+SET SERVEROUTPUT ON
+BEGIN
+  -- reg 19 is already DROPPED, reg 1 is COMPLETED
+  BEGIN
+    drop_registration(19);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (already dropped): ' || SQLERRM);
+  END;
+
+  BEGIN
+    drop_registration(1);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (completed)      : ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e06\_drop\_registration\_not\_droppable
+
+### E07 - user-defined exception e\_invalid\_score -\> ORA-20080
+
+```
+SET SERVEROUTPUT ON
+BEGIN
+  BEGIN
+    record_student_score(12, 150);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (score 150) : ' || SQLERRM);
+  END;
+
+  BEGIN
+    record_student_score(12, NULL);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (score NULL): ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e07\_invalid\_score
+
+### E08 - SQL%NOTFOUND + user-defined exception -\> ORA-20081
+
+```
+SET SERVEROUTPUT ON
+BEGIN
+  BEGIN
+    record_student_score(1, 80);       -- reg 1 is already COMPLETED
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (completed reg)  : ' || SQLERRM);
+  END;
+
+  BEGIN
+    record_student_score(99999, 80);   -- reg does not exist
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (unknown reg)    : ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e08\_score\_registration\_not\_open
+
+### E09 - ORA-20110 / ORA-20111
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_ok NUMBER;
+  v_ko NUMBER;
+BEGIN
+  BEGIN
+    bulk_register_students(101, '2026-FALL', t_id_list(), v_ok, v_ko);          -- empty collection
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (empty list)  : ' || SQLERRM);
+  END;
+
+  BEGIN
+    bulk_register_students(101, '2026-FALL', NULL, v_ok, v_ko);                -- atomically NULL collection
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (NULL list)   : ' || SQLERRM);
+  END;
+
+  BEGIN
+    bulk_register_students(999, '2026-FALL', t_id_list(1004), v_ok, v_ko);      -- unknown course
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (bad course)  : ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e09\_bulk\_register\_invalid\_input
+
+### E10 - user-defined exception e\_not\_enough\_seats -\> ORA-20112
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_ok NUMBER;
+  v_ko NUMBER;
+BEGIN
+  -- INSY350 has capacity 2 and is already full for 2026-FALL
+  bulk_register_students(106, '2026-FALL', t_id_list(1001, 1004), v_ok, v_ko);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e10\_bulk\_register\_not\_enough\_seats
+
+### E11 - NO\_DATA\_FOUND -\> ORA-20100
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_updated NUMBER;
+  v_failed  NUMBER;
+BEGIN
+  bulk_assign_letter_grades(999, '2026-FALL', v_updated, v_failed);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e11\_bulk\_grades\_course\_not\_found
+
+### E12 - function get\_letter\_grade -\> ORA-20030
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_grade VARCHAR2(2);
+BEGIN
+  BEGIN
+    v_grade := get_letter_grade(150);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (score 150): ' || SQLERRM);
+  END;
+
+  BEGIN
+    v_grade := get_letter_grade(NULL);
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (score NULL): ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e12\_invalid\_score\_for\_letter\_grade
+
+### E13 - function calculate\_student\_gpa: NO\_DATA\_FOUND -\> ORA-20040, no graded course -\> ORA-20041
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_gpa NUMBER;
+BEGIN
+  BEGIN
+    v_gpa := calculate_student_gpa(99999);     -- student does not exist
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (unknown student) : ' || SQLERRM);
+  END;
+
+  BEGIN
+    v_gpa := calculate_student_gpa(1007);      -- student exists but has no graded course
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (no graded course): ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e13\_gpa\_errors
+
+### E14 - predefined NO\_DATA\_FOUND and TOO\_MANY\_ROWS -\> ORA-20060 / ORA-20061
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_id students.student_id%TYPE;
+BEGIN
+  BEGIN
+    v_id := find_student_id_by_last_name('Nobody');      -- no row   -> NO_DATA_FOUND
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (no match)       : ' || SQLERRM);
+  END;
+
+  BEGIN
+    v_id := find_student_id_by_last_name('Mugisha');     -- 2 rows   -> TOO_MANY_ROWS
+  EXCEPTION
+    WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR (several matches): ' || SQLERRM);
+  END;
+END;
+/
+ROLLBACK;
+```
+
+e14\_find\_student\_errors
+
+### E15 - NO\_DATA\_FOUND -\> ORA-20130
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_credits NUMBER;
+BEGIN
+  print_student_transcript(p_student_id => 99999, p_total_credits => v_credits);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e15\_transcript\_student\_not\_found
+
+### E16 - NO\_DATA\_FOUND -\> ORA-20120
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_listed NUMBER;
+BEGIN
+  report_course_enrollment(p_semester => '2026-FALL', p_dept_id => 999, p_courses_listed => v_listed);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e16\_report\_department\_not\_found
+
+### E17 - an unexpected Oracle error is re-raised, not swallowed
+
+```
+SET SERVEROUTPUT ON
+DECLARE
+  v_reg registrations.reg_id%TYPE;
+BEGIN
+  -- semester NULL violates NOT NULL: not one of our business rules, so the procedure re-raises it (ORA-01400)
+  register_student_course(1004, 105, NULL, v_reg);
+EXCEPTION
+  WHEN OTHERS THEN DBMS_OUTPUT.PUT_LINE('EXPECTED ERROR: ' || SQLERRM);
+END;
+/
+ROLLBACK;
+```
+
+e17\_unexpected\_error\_is\_not\_hidden
+
+## 8. Use of AI assistance
+
+An AI assistant (Claude, by Anthropic) was used as a helper in this project: to propose the initial structure of the schema and of the PL/SQL units, to draft the test scripts and the documentation, and to explain Oracle features (bulk processing, `SAVE EXCEPTIONS`, cursor attributes). We reviewed every file, ran all the scripts in Oracle ourselves, produced the screenshots from our own runs, and both members can explain and justify every line of the code.
+
+## 9. Repository structure
+
+```
+plsql-assignment4-28874-<partnerID>/
+|-- README.md
+|-- .gitignore
+|-- run_all.sql
+|-- 00_schema/        00_drop_objects.sql, 01_create_tables.sql, 02_insert_sample_data.sql
+|-- 01_procedures/    8 stored procedures (one file each)
+|-- 02_functions/     4 stored functions (one file each)
+|-- 03_tests/         test_success_cases.sql, test_error_cases.sql
+|-- screenshots/      <test_name>_output.png
+`-- docs/             IMPLEMENTATION_NOTES.md
+```
