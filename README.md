@@ -223,4 +223,10 @@ Check constraints restrict statuses, letter grades, scores, credits and capacity
 | ORA-20120 | Department does not exist (enrollment report) |
 | ORA-20130 | Student does not exist (transcript) |
 | ORA-01400 | Unexpected NOT NULL violation, re-raised instead of hidden |
-   
+
+## Implementation and performance
+
+See [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md).
+
+## Use of AI assistance
+We used an AI assistant, Claude AI was used as a helper in this project: to propose the initial structure of the schema and of the PL/SQL units, to analyze the test scripts and the documentation for error like typos, and to explain Oracle features (bulk processing, `SAVE EXCEPTIONS`, cursor attributes). We reviewed every file, ran all the scripts in Oracle ourselves, produced the screenshots from our own runs, and both members can explain and justify every line of the code.
