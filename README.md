@@ -26,7 +26,7 @@ plsql-assignment4-28874-29844/
 │   ├── purge_dropped_registrations.sql
 │   ├── record_student_score.sql
 │   ├── register_student_course.sql
-│   ├── report_course_enrollment.sql
+│   └── report_course_enrollment.sql
 ├── 02_functions/
 │   |── calculate_student_gpa.sql
 │   ├── find_student_id_by_last_name.sql
