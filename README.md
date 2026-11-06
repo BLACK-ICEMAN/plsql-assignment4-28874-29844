@@ -34,7 +34,7 @@ plsql-assignment4-28874-29844/
 │   └── get_letter_grade.sql
 ├── 03_tests/
 │   ├── test_success_cases.sql
-│   ├── test_error_cases.sql
+│   └── test_error_cases.sql
 ├── docs/
 │   └── IMPLEMENTATION_NOTES.md
 ├── screenshots/
