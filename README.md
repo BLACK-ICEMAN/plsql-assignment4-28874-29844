@@ -14,7 +14,7 @@ The system allows university administrators to register students for courses, as
 
 ## Repository Structure
 ```text
-plsql-assignment4-29844-<PARTNER_ID>/
+plsql-assignment4-28874-29844/
 ├── 00_schema/
 │   ├── 01_create_tables.sql
 │   └── 02_insert_sample_data.sql
@@ -22,32 +22,34 @@ plsql-assignment4-29844-<PARTNER_ID>/
 │   ├── bulk_assign_letter_grades.sql
 │   ├── bulk_register_students.sql
 │   ├── drop_registration.sql
-│   └── print_student_transcript.sql
+│   |── print_student_transcript.sql
+│   ├── purge_dropped_registrations.sql
+│   ├── record_student_score.sql
+│   ├── register_student_course.sql
+│   ├── report_course_enrollment.sql
 ├── 02_functions/
-│   └── calculate_student_gpa.sql
+│   |── calculate_student_gpa.sql
+│   ├── find_student_id_by_last_name.sql
+│   |── get_course_available_seats.sql
+│   └── get_letter_grade.sql
 ├── 03_tests/
-│   ├── test_bulk_operations.sql
-│   ├── test_drop_registration.sql
+│   ├── test_success_cases.sql
+│   ├── test_error_cases.sql
 ├── docs/
 │   └── IMPLEMENTATION_NOTES.md
 ├── screenshots/
-│   ├── 01_register_student_course_output.png
-│   ├── 02_bulk_assign_grades_output.png
-│   |── e01_student_or_course_not_found_output.png
-|   └── (All test case screenshots}
+│   └── <test_name>_output.png   (one per test case)
 ├── .gitignore
-├── README.md
-└── run_all.sql
+└── README.md
 ```
-### Scripts must be run in numeric order.
+### Run the scripts in the order given under Installation and Execution
 
-* `00_schema/`: Contains DDL scripts for setting up and tearing down the database schema, as well as DML scripts for seeding initial sample data (`01_create_tables.sql`, `02_insert_sample_data.sql`, `00_drop_objects.sql`).
+* `00_schema/`: Contains DDL scripts for setting up the database schema, as well as DML scripts for seeding initial sample data (`01_create_tables.sql`, `02_insert_sample_data.sql`).
 * `02_functions/`: Contains individual `.sql` files for user-defined functions (e.g., `calculate_student_gpa.sql`).
 * `01_procedures/`: Contains individual `.sql` files for each stored procedure (e.g., `bulk_register_students.sql`, `bulk_assign_letter_grades.sql`, `drop_registration.sql`, `print_student_transcript.sql`).
 * `03_tests/`: Contains anonymous PL/SQL blocks used to test the procedures and functions, simulating both successful executions and error conditions.
 * `screenshots/`: Contains `.png` images capturing the DBMS_OUTPUT of the test scripts to verify correct execution and exception handling.
 * `docs/`: Contains `IMPLEMENTATION_NOTES.md` detailing the design decisions and specific PL/SQL features used.
-* `run_all.sql`: A utility script to compile and execute the entire project in the correct order.
 
  **Functions must be compiled before procedures**
 because procedures call them (for example `bulk_assign_letter_grades` calls `get_letter_grade`).
@@ -78,53 +80,9 @@ Beyond the business logic, this project serves as a comprehensive showcase of ad
 * Grade scale: A ≥ 90, B+ ≥ 85, B ≥ 80, C+ ≥ 75, C ≥ 70, D ≥ 60, F < 60 (GPA: A=4.0, B+=3.5, B=3.0, C+=2.5, C=2.0, D=1.0, F=0.0).
 * The procedures never `COMMIT`; the caller decides when to commit or roll back.
 
-## Installation and Execution (Two options)
-### Option 1:
-You can deploy the entire schema, compile the PL/SQL objects, and run the tests using the provided `run_all.sql` script.  
-We use `SET SERVEROUTPUT ON` so the test output is visible. Every test ends with `ROLLBACK`, so tests can be re-run without changing the sample data.  
+## Installation and Execution
 
-To make sure everything was compiled without any error, you can Verify it using the command below:  
-```sql
-SELECT object_type, object_name, status FROM user_objects
-WHERE  object_type IN ('FUNCTION', 'PROCEDURE', 'TYPE', 'SEQUENCE')
-ORDER  BY object_type, object_name;
-```
-or use the command below:
-```sql
-SELECT object_type, object_name, status
-FROM   user_objects
-WHERE  object_name IN (
-         'CALCULATE_STUDENT_GPA', 'FIND_STUDENT_ID_BY_LAST_NAME',
-         'GET_COURSE_AVAILABLE_SEATS', 'GET_LETTER_GRADE',
-         'BULK_ASSIGN_LETTER_GRADES', 'BULK_REGISTER_STUDENTS',
-         'DROP_REGISTRATION', 'PRINT_STUDENT_TRANSCRIPT',
-         'PURGE_DROPPED_REGISTRATIONS', 'RECORD_STUDENT_SCORE',
-         'REGISTER_STUDENT_COURSE', 'REPORT_COURSE_ENROLLMENT',
-         'SEQ_REG_ID', 'T_ID_LIST')
-ORDER  BY object_type, object_name;
-```
-<img width="641" height="367" alt="image" src="https://github.com/user-attachments/assets/9fcc08a9-259c-4cb0-be65-941dde57bbbe" />
-
--> You will be able to see the Object list, our sample data is 3 departments, 10 students, 6 courses, 19 registrations. So for example if you run:
-```sql
-SELECT COUNT(*) FROM departments;
-```
--> You will be able to see that you have 3 departments
-```sql
-SELECT COUNT(*) FROM students;
-```
--> You will be able to see that you have 10 students
-```sql
-SELECT COUNT(*) FROM courses;
-```
--> You will be able to see that you have 6 courses
-```sql
-SELECT COUNT(*) FROM registrations;
-```
--> You will be able to see that you have 19 registrations
-
-### Option2
-You can also do the installation manually in the following order:
+You can do the installation manually in the following order:
 1. **Schema Creation & Data Seeding:**
    Run the scripts in `00_schema/` to create the tables and insert sample data.
    After tables are created you should get this exact output
@@ -166,7 +124,48 @@ ORDER  BY t.table_name;
    <img width="721" height="655" alt="image" src="https://github.com/user-attachments/assets/4eb80787-6f65-4a7f-b115-7e714e9eafc1" />
    <img width="681" height="180" alt="image" src="https://github.com/user-attachments/assets/e3e7abb5-7990-4bf0-ab1b-1431c6649dc0" />
 
-## Errors Encountered and Resolution  
+To make sure everything was compiled without any error, you can Verify it using the command below:  
+```sql
+SELECT object_type, object_name, status FROM user_objects
+WHERE  object_type IN ('FUNCTION', 'PROCEDURE', 'TYPE', 'SEQUENCE')
+ORDER  BY object_type, object_name;
+```
+or use the command below:
+```sql
+SELECT object_type, object_name, status
+FROM   user_objects
+WHERE  object_name IN (
+         'CALCULATE_STUDENT_GPA', 'FIND_STUDENT_ID_BY_LAST_NAME',
+         'GET_COURSE_AVAILABLE_SEATS', 'GET_LETTER_GRADE',
+         'BULK_ASSIGN_LETTER_GRADES', 'BULK_REGISTER_STUDENTS',
+         'DROP_REGISTRATION', 'PRINT_STUDENT_TRANSCRIPT',
+         'PURGE_DROPPED_REGISTRATIONS', 'RECORD_STUDENT_SCORE',
+         'REGISTER_STUDENT_COURSE', 'REPORT_COURSE_ENROLLMENT',
+         'SEQ_REG_ID', 'T_ID_LIST')
+ORDER  BY object_type, object_name;
+```
+<img width="641" height="367" alt="image" src="https://github.com/user-attachments/assets/9fcc08a9-259c-4cb0-be65-941dde57bbbe" />
+
+-> You will be able to see the Object list, our sample data is 3 departments, 10 students, 6 courses, 19 registrations. So for example if you run:
+```sql
+SELECT COUNT(*) FROM departments;
+```
+-> You will be able to see that you have 3 departments
+```sql
+SELECT COUNT(*) FROM students;
+```
+-> You will be able to see that you have 10 students
+```sql
+SELECT COUNT(*) FROM courses;
+```
+-> You will be able to see that you have 6 courses
+```sql
+SELECT COUNT(*) FROM registrations;
+```
+-> You will be able to see that you have 19 registrations
+
+
+## Errors most likely to occur and Resolution  
 1. When `01_procedures/` is run before `02_functions/` you will get an error. Procedures will tend to call functions for example: procedure `bulk_assign_letter_grades` will call function `get_letter_grade`, you will get the following error in the screenshot because it will be considered as if function `get_letter_grade` has not been declared. So to avoid it, you have to run/compile functions first and then procedures after.
 <img width="832" height="297" alt="bulk assign letter grades error" src="https://github.com/user-attachments/assets/ca120a23-3a57-45c4-8a51-d23274433ac0" />
 
@@ -180,8 +179,6 @@ courses, with a unique key on `(student_id, course_id, semester)`.
 Check constraints restrict statuses, letter grades, scores, credits and capacity.
 
 ## Procedures and functions
-
-<!-- Descriptions below are based on the test output; adjust if your code differs. -->
 
 | Name | Type | Purpose |
 |---|---|---|
@@ -197,7 +194,6 @@ Check constraints restrict statuses, letter grades, scores, credits and capacity
 | `get_course_available_seats` | Function | Seats left in a course for a semester |
 | `find_student_id_by_last_name` | Function | Looks up a student id by last name |
 | `calculate_student_gpa` | Function | Computes a student's GPA |
-
 
 ## Error codes
 
@@ -224,9 +220,19 @@ Check constraints restrict statuses, letter grades, scores, credits and capacity
 | ORA-20130 | Student does not exist (transcript) |
 | ORA-01400 | Unexpected NOT NULL violation, re-raised instead of hidden |
 
-## Implementation and performance
-
+## Integrity statement  
+   We confirm that this work is our own, completed in accordance with the assignment guidelines and academic integrity standards, with the AI assistance described below. We ran all scripts and captured all screenshots ourselves.  
+   
+## Implementation and performance  
 See [docs/IMPLEMENTATION_NOTES.md](docs/IMPLEMENTATION_NOTES.md).
 
 ## Use of AI assistance
-We used an AI assistant, Claude AI was used as a helper in this project: to propose the initial structure of the schema and of the PL/SQL units, to analyze the test scripts and the documentation for error like typos, and to explain Oracle features (bulk processing, `SAVE EXCEPTIONS`, cursor attributes). We reviewed every file, ran all the scripts in Oracle ourselves, produced the screenshots from our own runs, and both members can explain and justify every line of the code.
+
+We used an AI assistant (Claude by Anthropic) as a helper in this project. It was used to:
+
+- Explain Oracle PL/SQL features (bulk processing, `SAVE EXCEPTIONS`, cursor attributes, exception handling).
+- Diagnose a compile error (`PLS-00201`) caused by compiling procedures before the functions they call.
+- Review our test scripts, README and documentation for typos, inconsistencies and missing requirements from the assignment checklist.
+- Suggest SQL queries to verify that our objects, tables and sample data were created correctly.
+
+The database design, the stored procedures and functions, and the test scripts are our own work. We reviewed every file, ran all scripts in Oracle ourselves, captured the screenshots from our own runs, and both members can explain and justify every line of the code.
