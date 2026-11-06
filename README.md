@@ -198,17 +198,6 @@ Check constraints restrict statuses, letter grades, scores, credits and capacity
 | `find_student_id_by_last_name` | Function | Looks up a student id by last name |
 | `calculate_student_gpa` | Function | Computes a student's GPA |
 
-## Concepts demonstrated
-
-| Concept | Where |
-|---|---|
-| User-defined records and `%ROWTYPE` | TODO: list procedures |
-| Collections (associative arrays, nested table / VARRAY) | `bulk_assign_letter_grades`, TODO |
-| Implicit cursors (`SQL%ROWCOUNT`, `SQL%FOUND`, `SQL%NOTFOUND`) | `register_student_course`, `drop_registration`, `purge_dropped_registrations`, `record_student_score` |
-| Explicit cursors | `bulk_assign_letter_grades`, reports, TODO |
-| `BULK COLLECT` and `FORALL ... SAVE EXCEPTIONS` | `bulk_register_students`, `bulk_assign_letter_grades` |
-| Predefined exceptions | `NO_DATA_FOUND`, `TOO_MANY_ROWS`, `DUP_VAL_ON_INDEX` (TODO: confirm) |
-| User-defined exceptions and `RAISE_APPLICATION_ERROR` | codes below |
 
 ## Error codes
 
